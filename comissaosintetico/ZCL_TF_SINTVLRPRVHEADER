@@ -1,0 +1,136 @@
+CLASS ZCL_TF_SINTVLRPRVHEADER DEFINITION
+  PUBLIC FINAL CREATE PUBLIC.
+  PUBLIC SECTION.
+
+    INTERFACES IF_AMDP_MARKER_HDB.
+
+    CLASS-METHODS GET_DATA
+      FOR TABLE FUNCTION ZSD_I_TFSINTVLRPRVHEADERCDS.
+ENDCLASS.
+
+CLASS ZCL_TF_SINTVLRPRVHEADER IMPLEMENTATION.
+  METHOD get_data BY DATABASE FUNCTION
+    FOR HDB
+    LANGUAGE SQLSCRIPT
+    OPTIONS READ-ONLY
+    USING
+      zsd_i_sintvlrprvheadercds_q
+      zsd_i_buscaescalacds.
+
+    RETURN
+    WITH
+
+    G AS (
+      SELECT
+        H.mandt,
+        H.CodigoFornecedor,
+        H.ContratoCondicao,
+        H.Compensado,
+        H.EquipeVendas, H.EscritorioVendas,
+        TRIM(H.SetorAtividade)  AS SetorAtividade,
+        MAX(H.NomeFornecedor)   AS NomeFornecedor,
+        MAX(H.NomeResponsavel)  AS NomeResponsavel,
+        H.waers,
+        CAST(SUM(H.dmbtr) AS DECIMAL(23,4)) AS sum_dmbtr
+      FROM ZSD_I_SINTVLRPRVHEADERCDS_Q AS H
+      WHERE H.mandt = :p_client
+        AND (
+              H.Compensado <> 'X'
+              OR (
+                   H.Compensado = 'X'
+                   AND (
+                         ( :p_data_inicio = '00000000' AND :p_data_fim = '00000000' )
+                         OR ( H.DataCompensacao BETWEEN :p_data_inicio AND :p_data_fim )
+                       )
+                 )
+            )
+      GROUP BY
+        H.mandt,
+        h.EquipeVendas,
+        h.EscritorioVendas,
+        H.CodigoFornecedor,
+        H.ContratoCondicao,
+        H.Compensado,
+        TRIM(H.SetorAtividade),
+        H.waers
+    ),
+
+    Pricing_Agg AS (
+      SELECT
+        mandt,
+        CodigoFornecedor,
+        ContratoCondicao,
+        TRIM(SetorAtividade) AS SetorAtividade,
+        MAX(Taxa)                              AS Taxa_Base,
+        MAX(TaxaSegundaFaixa)                  AS Taxa_Faixa2,
+        MAX(Taxa) + MAX(TaxaSegundaFaixa)      AS Limite_Din
+      FROM ZSD_I_BUSCAESCALACDS
+      WHERE mandt = :p_client
+      GROUP BY
+        mandt,
+        CodigoFornecedor,
+        ContratoCondicao,
+        TRIM(SetorAtividade)
+    ),
+
+    B0 AS (
+      SELECT
+        g.*,
+        COALESCE(p.Taxa_Base, 0) / 1000                            AS Taxa_Faixa_1,
+        COALESCE(p.Taxa_Faixa2, COALESCE(p.Taxa_Base, 0)) / 1000  AS Taxa_Faixa_2,
+        COALESCE(p.Limite_Din, 0)                                  AS Dynamic_Cap
+      FROM G AS g
+      LEFT JOIN Pricing_Agg AS p
+        ON  p.CodigoFornecedor = g.CodigoFornecedor
+        AND p.ContratoCondicao = g.ContratoCondicao
+        AND p.SetorAtividade   = g.SetorAtividade
+    ),
+
+    B AS (
+      SELECT
+        b0.*,
+        CASE
+          WHEN b0.SetorAtividade = '20'
+            THEN CAST(0.00 AS DECIMAL(15,2))
+          WHEN b0.SetorAtividade = '10'
+            THEN CASE
+                   WHEN b0.sum_dmbtr >= b0.Dynamic_Cap
+                     THEN b0.Dynamic_Cap
+                   ELSE b0.sum_dmbtr
+                 END
+          ELSE CAST(0.00 AS DECIMAL(15,2))
+        END AS Valor_ate_250k,
+
+        CASE
+          WHEN b0.SetorAtividade = '20'
+            THEN b0.sum_dmbtr
+          WHEN b0.SetorAtividade = '10' AND b0.sum_dmbtr > b0.Dynamic_Cap
+            THEN ( b0.sum_dmbtr - b0.Dynamic_Cap )
+          ELSE CAST(0.00 AS DECIMAL(15,2))
+        END AS Valor_acima_250k
+      FROM B0 AS b0
+    )
+
+    SELECT
+      b.mandt              AS mandt,
+      b.CodigoFornecedor   AS CodigoFornecedor,
+      b.ContratoCondicao   AS ContratoCondicao,
+      b.Compensado         AS Compensado,
+      b.SetorAtividade     AS SetorAtividade,
+      b.NomeFornecedor     AS NomeFornecedor,
+      b.NomeResponsavel    AS NomeResponsavel,
+      b.waers              AS waers,
+
+      CAST(b.sum_dmbtr        AS DECIMAL(15,2)) AS dmbtr,
+      CAST(b.Valor_ate_250k   AS DECIMAL(15,2)) AS Valor_ate_250k,
+      CAST(b.Valor_acima_250k AS DECIMAL(15,2)) AS Valor_acima_250k,
+
+      CAST( ROUND( (b.Valor_ate_250k   * b.Taxa_Faixa_1), 2 ) AS DECIMAL(15,2) ) AS VlrComissao_1_5,
+      CAST( ROUND( (b.Valor_acima_250k * b.Taxa_Faixa_2), 2 ) AS DECIMAL(15,2) ) AS VlrComissao_0_75,
+      CAST( ROUND( (b.Valor_ate_250k   * b.Taxa_Faixa_1)
+                  + (b.Valor_acima_250k * b.Taxa_Faixa_2), 2 ) AS DECIMAL(15,2) ) AS VlrComissaoCalc
+
+    FROM B AS b;
+
+  ENDMETHOD.
+ENDCLASS.

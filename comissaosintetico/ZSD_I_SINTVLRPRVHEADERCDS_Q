@@ -1,0 +1,25 @@
+@AbapCatalog.sqlViewName: 'ZVCSINTHEADERCDS'
+@AbapCatalog.compiler.compareFilter: true
+@AbapCatalog.preserveKey: true
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@EndUserText.label: 'ZSD_C_SINTVLRPRVHEADERCDS'
+@Metadata.ignorePropagatedAnnotations: true
+@ClientHandling.algorithm: #SESSION_VARIABLE
+@ClientHandling.type: #CLIENT_DEPENDENT
+@VDM.viewType: #COMPOSITE
+
+define view ZSD_I_SINTVLRPRVHEADERCDS_Q as select from ZSD_I_SINTVLRPRVHEADERCDS
+{
+    key CodigoFornecedor,
+    key ContratoCondicao,
+    key EquipeVendas,
+    key EscritorioVendas,
+    key Compensado,
+    key DataCompensacao,
+    key SetorAtividade,
+    NomeFornecedor,
+    NomeResponsavel,
+    waers,
+    dmbtr,
+    CompensadoText
+}

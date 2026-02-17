@@ -1,0 +1,50 @@
+@AbapCatalog.viewEnhancementCategory: [ #NONE ]
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@EndUserText.label: 'Busca Taxa por Setor (Linha a Linha)'
+@Metadata.ignorePropagatedAnnotations: true
+
+define view entity ZSD_I_BUSCAESCALACDS
+  as select from wcocoh as Contract
+
+    inner join   konh   as Header
+      on  Header.ccnum = Contract.num
+      and Header.kschl = 'RCS1'
+
+    inner join   a955   as Access
+      on Access.knumh = Header.knumh
+
+    inner join   konp   as Item
+      on  Item.knumh    = Header.knumh
+      and Item.kschl    = 'RCS1'
+      and Item.loevm_ko = ''
+
+    left outer join konw as ScaleTier2
+      on  ScaleTier2.knumh = Header.knumh
+      and ScaleTier2.kopos = Item.kopos
+      and ScaleTier2.klfn1 = '0002' 
+
+{
+  key Contract.vend_owner as CodigoFornecedor,
+  key Contract.num        as ContratoCondicao,
+
+  key Access.spart        as SetorAtividade,
+
+      @Semantics.amount.currencyCode: 'Waers'
+      Item.kbetr          as Taxa, 
+
+      @Semantics.amount.currencyCode: 'Waers'
+      ScaleTier2.kbetr    as TaxaSegundaFaixa, 
+
+      @Semantics.amount.currencyCode: 'Waers'
+      ScaleTier2.kstbw    as LimiteEscala, 
+
+      Contract.cc_curr    as Waers
+}
+
+group by Contract.vend_owner,
+         Contract.num,
+         Access.spart,
+         Item.kbetr,
+         ScaleTier2.kbetr,
+         ScaleTier2.kstbw,
+         Contract.cc_curr

@@ -1,0 +1,45 @@
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@Analytics.dataCategory: #CUBE
+@EndUserText.label: 'Relatório Sintético - Dados Agregados'
+
+define root view entity ZSD_I_SINTVLRPRVHEADERCDS
+  as select distinct from ZSD_I_SINTVLRPRVDETAILSCDS
+
+{
+  key CodigoFornecedor,
+  key ContratoCondicao,
+  key Compensado,
+  key EquipeVendas,
+  key EscritorioVendas,
+  key DataCompensacao,
+  key SetorAtividade,
+
+      NomeFornecedor,
+      NomeResponsavel,
+      waers,
+
+      TipoDocumento,
+
+      @Semantics.amount.currencyCode: 'waers'
+      sum( dmbtr ) as dmbtr,
+
+      case Compensado
+             when 'X' then 'Compensado'
+             else 'Não Compensado'
+           end     as CompensadoText
+
+
+}
+
+group by
+  CodigoFornecedor,
+  NomeFornecedor,
+  ContratoCondicao,
+  EquipeVendas,
+  EscritorioVendas,
+  NomeResponsavel,
+  Compensado,
+  waers,
+  TipoDocumento,
+  DataCompensacao,
+  SetorAtividade

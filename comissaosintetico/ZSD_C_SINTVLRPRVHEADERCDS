@@ -1,0 +1,163 @@
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+
+@EndUserText.label: 'Relatório de Comissão'
+
+@Metadata.allowExtensions: true
+
+@UI.chart: [ { chartType: #COLUMN,
+               qualifier: 'ChartDefault',
+               title: 'Montante MI por Fornecedor e Status',
+               measures: [ 'dmbtr', 'VlrComissaoCalc' ],
+               measureAttributes: [ { measure: 'dmbtr',           role: #AXIS_1 },
+                                    { measure: 'VlrComissaoCalc', role: #AXIS_1 } ],
+               dimensions: [ 'CodigoFornecedor', 'Compensado' ],
+               dimensionAttributes: [ { dimension: 'CodigoFornecedor', role: #CATEGORY },
+                                      { dimension: 'Compensado',       role: #SERIES   } ] } ]
+
+@UI.headerInfo: { typeName: 'Relatório de Comissão',
+                  typeNamePlural: 'Relatório de Comissões',
+                  title: { type: #STANDARD, label: 'Fornecedor', value: 'CodigoFornecedor' },
+                  description: { type: #STANDARD, label: 'Nome', value: 'NomeFornecedor' } }
+
+@UI.presentationVariant: [ { qualifier: 'Default',
+                             visualizations: [ { type: #AS_CHART, qualifier: 'ChartDefault' } ] } ]
+
+define root view entity ZSD_C_SINTVLRPRVHEADERCDS
+  with parameters
+    @Consumption.valueHelpDefinition: [ { entity: { name: 'ZSD_I_VHDATACDS', element: 'DataValor' } } ]
+    @EndUserText.label: 'Data Compensação (De)'
+    p_DataInicio : dats,
+
+    @Consumption.valueHelpDefinition: [ { entity: { name: 'ZSD_I_VHDATACDS', element: 'DataValor' } } ]
+    @EndUserText.label: 'Data Compensação (Até)'
+    p_DataFim    : dats
+
+  as select from    ZSD_I_SINTVLRPRVHEADERCDS                as H
+
+    left outer join ZSD_I_TFSUMSETORCDS(
+                      p_client      : $session.client,
+                      p_data_inicio : $parameters.p_DataInicio,
+                      p_data_fim    : $parameters.p_DataFim) as TF
+      on  TF.CodigoFornecedor = H.CodigoFornecedor
+      and TF.ContratoCondicao = H.ContratoCondicao
+      and TF.Compensado       = H.Compensado
+      and TF.SetorAtividade   = H.SetorAtividade
+
+{
+      @AnalyticsDetails.query.axis: #ROWS
+      @Consumption.semanticObject: 'ZBSP_SD_RELATVLRPRE'
+      @UI.facet: [ { id: 'GeneralInfo', position: 10, type: #IDENTIFICATION_REFERENCE, label: 'Informações Gerais' },
+                   { id: 'TabCollection', position: 20, type: #COLLECTION },
+                   { parentId: 'TabCollection',
+                     id: 'OrgDataTab',
+                     type: #FIELDGROUP_REFERENCE,
+                     label: 'Dados Organizacionais',
+                     targetQualifier: 'OrgDataGroup',
+                     position: 10 },
+                   { parentId: 'TabCollection',
+                     id: 'DatesTab',
+                     type: #FIELDGROUP_REFERENCE,
+                     label: 'Datas',
+                     targetQualifier: 'DateGroup',
+                     position: 20 } ]
+      @UI.identification: [ { position: 10, label: 'Código Fornecedor' } ]
+      @UI.lineItem: [ { position: 10,
+                        label: 'Fornecedor',
+                        type: #WITH_INTENT_BASED_NAVIGATION,
+                        semanticObjectAction: 'display' } ]
+      @UI.selectionField: [ { position: 30 } ]
+  key H.CodigoFornecedor,
+
+      @AnalyticsDetails.query.axis: #ROWS
+      @UI.identification: [ { position: 30, label: 'Contrato de Condição' } ]
+      @UI.lineItem: [ { position: 30, label: 'Contrato de Condição' } ]
+      @UI.selectionField: [ { position: 40 } ]
+  key H.ContratoCondicao,
+
+      @AnalyticsDetails.query.axis: #ROWS
+      @Consumption.filter.mandatory: true
+      @EndUserText.label: 'Compensado'
+      @ObjectModel.text.element: [ 'CompensadoText' ]
+      @UI.identification: [ { position: 40, label: 'Status Compensação' } ]
+      @UI.lineItem: [ { position: 40, label: 'Status Compensação' } ]
+      @UI.selectionField: [ { position: 10 } ]
+      @UI.textArrangement: #TEXT_ONLY
+  key H.Compensado,
+
+      @UI.hidden: true
+  key H.EscritorioVendas,
+
+      @UI.hidden: true
+  key H.EquipeVendas,
+
+      @AnalyticsDetails.query.axis: #FREE
+      @Consumption.filter.selectionType: #INTERVAL
+      @UI.fieldGroup: [ { qualifier: 'OrgDataGroup', position: 40, label: 'Setor Atividade' } ]
+      @UI.lineItem: [ { position: 90, label: 'Setor Atividade' } ]
+  key H.SetorAtividade,
+
+      max(H.CompensadoText)    as CompensadoText,
+
+      @UI.identification: [ { position: 20, label: 'Nome do Fornecedor' } ]
+      @UI.lineItem: [ { position: 20, label: 'Nome do Fornecedor' } ]
+      max(H.NomeFornecedor)    as NomeFornecedor,
+
+      @DefaultAggregation: #SUM
+      @EndUserText.label: 'Montante MI'
+      @Semantics.amount.currencyCode: 'waers'
+      @UI.identification: [ { position: 50, label: 'Montante MI' } ]
+      @UI.lineItem: [ { position: 50, importance: #MEDIUM, label: 'Montante MI' } ]
+      sum(H.dmbtr)             as dmbtr,
+
+      @DefaultAggregation: #SUM
+      @EndUserText.label: 'Base Comissão (até 250k)'
+      @Semantics.amount.currencyCode: 'waers'
+      @UI.lineItem: [ { position: 51, importance: #LOW, label: 'Base Comissão (até 250k)' } ]
+      max(TF.Valor_ate_250k)   as Valor_ate_250k,
+
+      @DefaultAggregation: #SUM
+      @EndUserText.label: 'Base Comissão (acima 250k)'
+      @Semantics.amount.currencyCode: 'waers'
+      @UI.lineItem: [ { position: 52, importance: #LOW, label: 'Base Comissão (acima 250k)' } ]
+      max(TF.Valor_acima_250k) as Valor_acima_250k,
+
+      @DefaultAggregation: #SUM
+      @EndUserText.label: 'Valor Comissão (1.5%)'
+      @Semantics.amount.currencyCode: 'waers'
+      @UI.lineItem: [ { position: 53, importance: #LOW, label: 'Valor Comissão (1.5%)' } ]
+      max(TF.VlrComissao_1_5)  as VlrComissao_1_5,
+
+      @DefaultAggregation: #SUM
+      @EndUserText.label: 'Valor Comissão (0.75%)'
+      @Semantics.amount.currencyCode: 'waers'
+      @UI.lineItem: [ { position: 54, importance: #LOW, label: 'Valor Comissão (0.75%)' } ]
+      max(TF.VlrComissao_0_75) as VlrComissao_0_75,
+
+      @DefaultAggregation: #SUM
+      @EndUserText.label: 'Comissão Calculada'
+      @Semantics.amount.currencyCode: 'waers'
+      @UI.identification: [ { position: 55, label: 'Comissão Calculada (Regra SPART)' } ]
+      @UI.lineItem: [ { position: 55, importance: #HIGH, label: 'Comissão Calculada' } ]
+      max(TF.VlrComissaoCalc)  as VlrComissaoCalc,
+
+      @UI.fieldGroup: [ { qualifier: 'OrgDataGroup', position: 30, label: 'Nome do Responsável' } ]
+      @UI.identification: [ { position: 60, label: 'Nome do Responsável' } ]
+      @UI.lineItem: [ { position: 60, importance: #MEDIUM, label: 'Nome do Responsável' } ]
+      max(H.NomeResponsavel)   as NomeResponsavel,
+
+      @UI.hidden: true
+      H.waers
+}
+
+where(H.Compensado <> 'X')
+  or(H.Compensado = 'X'
+     and(($parameters.p_DataInicio = '00000000' and $parameters.p_DataFim = '00000000')
+      or(H.DataCompensacao between $parameters.p_DataInicio and $parameters.p_DataFim)))
+
+group by H.CodigoFornecedor,
+         H.EscritorioVendas,
+         H.EquipeVendas,
+         H.ContratoCondicao,
+         H.Compensado,
+         H.SetorAtividade,
+         H.waers

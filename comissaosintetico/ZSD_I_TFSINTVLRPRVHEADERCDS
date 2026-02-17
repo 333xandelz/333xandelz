@@ -1,0 +1,36 @@
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@ClientHandling.algorithm: #SESSION_VARIABLE
+@ClientHandling.type: #CLIENT_DEPENDENT
+@EndUserText.label: 'TF - SintVlrPrv Header'
+
+define table function ZSD_I_TFSINTVLRPRVHEADERCDS
+  with parameters
+    @Environment.systemField: #CLIENT
+    p_client      : abap.clnt,
+    p_data_inicio : abap.dats,
+    p_data_fim    : abap.dats
+
+returns
+{
+  key mandt            : mandt;
+  key CodigoFornecedor : abap.char(10);
+  key ContratoCondicao : abap.char(20);
+  key Compensado       : abap.char(3);
+  key SetorAtividade   : abap.char(2);
+      NomeFornecedor   : abap.char(40);
+      NomeResponsavel  : abap.char(40);
+      waers            : abap.cuky;
+      @Semantics: { amount : {currencyCode: 'WAERS'} }
+      dmbtr            : abap.curr(15,2);
+      @Semantics: { amount : {currencyCode: 'WAERS'} }
+      Valor_ate_250k   : abap.curr(15,2);
+      @Semantics: { amount : {currencyCode: 'WAERS'} }
+      Valor_acima_250k : abap.curr(15,2);
+      @Semantics: { amount : {currencyCode: 'WAERS'} }
+      VlrComissao_1_5  : abap.curr(15,2);
+      @Semantics: { amount : {currencyCode: 'WAERS'} }
+      VlrComissao_0_75 : abap.curr(15,2);
+      @Semantics: { amount : {currencyCode: 'WAERS'} }
+      VlrComissaoCalc  : abap.curr(15,2);
+}
+implemented by method ZCL_TF_SINTVLRPRVHEADER=>GET_DATA;

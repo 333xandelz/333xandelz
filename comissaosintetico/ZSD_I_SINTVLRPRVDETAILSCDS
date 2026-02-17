@@ -1,0 +1,83 @@
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+
+@EndUserText.label: 'Detalhes para Relatório de Comissão'
+
+@Metadata.ignorePropagatedAnnotations: true
+
+define root view entity ZSD_I_SINTVLRPRVDETAILSCDS
+  as select distinct from ZSD_I_WB2_VBRK_VBRP_1 as vbrp
+
+    inner join            vbrk                                    on vbrk.vbeln = vbrp.vbeln
+
+    left outer join       vbpa                                    on  vbpa.vbeln = vbrp.vbeln
+                                                                  and vbpa.parvw = 'ES'
+
+    left outer join       but000                as Fornecedor     on Fornecedor.partner = vbpa.assigned_bp
+
+    left outer join       lfa1                  as NomeFornecedor on vbpa.assigned_bp = NomeFornecedor.lifnr
+
+    left outer join       prcd_elements         as Zpvd           on  Zpvd.knumv = vbrk.knumv
+                                                                  and Zpvd.kposn = vbrp.posnr
+                                                                  and Zpvd.kschl = 'ZPVD'
+
+    left outer join       prcd_elements         as Rcs1           on  Rcs1.knumv = vbrk.knumv
+                                                                  and Rcs1.kposn = vbrp.posnr
+                                                                  and Rcs1.kschl = 'RCS1'
+
+    left outer join       j_1bnflin             as nf_lin         on  nf_lin.refkey = vbrp.vbeln
+                                                                  and nf_lin.itmnum = vbrp.posnr
+
+    left outer join       ZSD_I_CLEAREDVLRSCDS  as b              on  b.awtyp = 'VBRK'
+                                                                  and b.awkey = vbrp.vbeln
+
+    left outer join       wcocoh                                  on wcocoh.vend_owner = vbpa.assigned_bp
+
+    left outer join       wb2_d_settl_cal       as cal            on cal.num = wcocoh.num
+
+    left outer join       ZSD_I_COUNT_BUZEI     as cnt            on cnt.vbeln = vbrp.vbeln
+
+{
+  key vbrp.vbeln,
+  key vbrp.posnr,
+
+  key b.belnr,
+  key b.gjahr,
+  key b.bukrs,
+  key b.buzei,
+
+
+  key case
+    when b.augdt is null or b.augdt = '00000000'
+    then cast(' ' as abap_boolean)
+    else cast('X' as abap_boolean)
+  end                                  as Compensado,
+
+  key vbrp.vkgrp                       as EquipeVendas,
+  key vbrp.vkbur                       as EscritorioVendas,
+  key b.augdt                          as DataCompensacao,
+  key vbrp.spart                       as SetorAtividade,
+
+      wcocoh.vend_owner                as CodigoFornecedor,
+      NomeFornecedor.name1             as NomeFornecedor,
+      wcocoh.num                       as ContratoCondicao,
+      wcocoh.ch_name                   as NomeResponsavel,
+
+      b.blart                          as TipoDocumento,
+
+      @Semantics.amount.currencyCode: 'waers'
+      cast(
+        cast(
+            (
+              coalesce( cast(nf_lin.netwr as abap.dec(23,2)), 0 )
+              * case when b.blart = 'R3' then -1 else 1 end
+            )
+            /
+            cast( case when cnt.qtd_buzei > 0 then cnt.qtd_buzei else 1 end as abap.dec(23,2) )
+
+        as abap.dec(23,2) )
+
+      as abap.curr(15,2) )             as dmbtr,
+
+      coalesce(b.waers_cc, vbrk.waerk) as waers
+
+}

@@ -1,0 +1,18 @@
+@AbapCatalog.viewEnhancementCategory: [#NONE]
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@EndUserText.label: 'Soma IBRX no Pricing (por KNUMV)'
+@Metadata.ignorePropagatedAnnotations: true
+define view entity ZSD_I_PRCDIBRXSUMCDS
+  as select from prcd_elements
+{
+  key knumv,
+  cast(
+    sum(
+      abs( cast( kawrt as abap.dec(23,4) ) )
+    )
+    as abap.dec(23,4)
+  ) as ibrx_total
+}
+where kappl = 'V'
+  and kschl = 'IBRX'
+group by knumv;

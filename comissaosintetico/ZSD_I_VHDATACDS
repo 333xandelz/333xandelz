@@ -1,0 +1,28 @@
+@AbapCatalog.viewEnhancementCategory: [ #NONE ]
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@EndUserText.label: 'Ajuda de pesquisa para Data'
+@Metadata.ignorePropagatedAnnotations: true
+
+define view entity ZSD_I_VHDATACDS
+as select from I_CalendarDate as S
+{
+  @ObjectModel.text.element: ['DataTexto']
+  @UI.textArrangement: #TEXT_ONLY
+  @Search.defaultSearchElement: true
+  key cast( '00000000' as dats )         as DataValor,
+
+  @Semantics.text: true
+  cast( '(Em Branco)' as abap.char(60) ) as DataTexto
+}
+where S.CalendarDate = '20200101'    
+
+union all
+
+select from I_CalendarDate
+{
+  key CalendarDate                          as DataValor,
+
+  cast( CalendarDate as abap.char(60) )     as DataTexto
+}
+where CalendarDate between '20200101' and '20301231'
+;
