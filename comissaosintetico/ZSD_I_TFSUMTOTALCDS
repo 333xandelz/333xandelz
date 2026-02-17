@@ -1,0 +1,43 @@
+@AbapCatalog.viewEnhancementCategory: [ #NONE ]
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@EndUserText.label: 'Agregação da TF (Total)'
+@Metadata.ignorePropagatedAnnotations: true
+
+define view entity ZSD_I_TFSUMTOTALCDS
+  with parameters
+    p_client      : mandt,
+    p_data_inicio : dats,
+    p_data_fim    : dats
+
+  as select from ZSD_I_TFSINTVLRPRVHEADERCDS(
+                   p_client      : $parameters.p_client,
+                   p_data_inicio : $parameters.p_data_inicio,
+                   p_data_fim    : $parameters.p_data_fim)
+
+{
+  key CodigoFornecedor,
+  key ContratoCondicao,
+  key Compensado,
+
+      @Semantics.amount.currencyCode: 'WAERS'
+      sum(Valor_ate_250k)   as Valor_ate_250k,
+
+      @Semantics.amount.currencyCode: 'WAERS'
+      sum(Valor_acima_250k) as Valor_acima_250k,
+
+      @Semantics.amount.currencyCode: 'WAERS'
+      sum(VlrComissao_1_5)  as VlrComissao_1_5,
+
+      @Semantics.amount.currencyCode: 'WAERS'
+      sum(VlrComissao_0_75) as VlrComissao_0_75,
+
+      @Semantics.amount.currencyCode: 'WAERS'
+      sum(VlrComissaoCalc)  as VlrComissaoCalc,
+
+      waers                 as WAERS
+}
+
+group by CodigoFornecedor,
+         ContratoCondicao,
+         Compensado,
+         waers

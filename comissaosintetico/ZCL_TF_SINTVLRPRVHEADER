@@ -26,7 +26,6 @@ CLASS ZCL_TF_SINTVLRPRVHEADER IMPLEMENTATION.
         H.CodigoFornecedor,
         H.ContratoCondicao,
         H.Compensado,
-        H.EquipeVendas, H.EscritorioVendas,
         TRIM(H.SetorAtividade)  AS SetorAtividade,
         MAX(H.NomeFornecedor)   AS NomeFornecedor,
         MAX(H.NomeResponsavel)  AS NomeResponsavel,
@@ -46,8 +45,6 @@ CLASS ZCL_TF_SINTVLRPRVHEADER IMPLEMENTATION.
             )
       GROUP BY
         H.mandt,
-        h.EquipeVendas,
-        h.EscritorioVendas,
         H.CodigoFornecedor,
         H.ContratoCondicao,
         H.Compensado,
