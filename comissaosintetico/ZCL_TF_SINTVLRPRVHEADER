@@ -60,7 +60,7 @@ CLASS ZCL_TF_SINTVLRPRVHEADER IMPLEMENTATION.
         TRIM(SetorAtividade) AS SetorAtividade,
         MAX(Taxa)                              AS Taxa_Base,
         MAX(TaxaSegundaFaixa)                  AS Taxa_Faixa2,
-        MAX(Taxa) + MAX(TaxaSegundaFaixa)      AS Limite_Din
+        MAX(LimiteEscala)                      AS Limite_Din
       FROM ZSD_I_BUSCAESCALACDS
       WHERE mandt = :p_client
       GROUP BY
