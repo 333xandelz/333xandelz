@@ -42,6 +42,7 @@ define root view entity ZSD_C_SINTVLRPRVHEADERCDS
       and TF.ContratoCondicao = H.ContratoCondicao
       and TF.Compensado       = H.Compensado
       and TF.SetorAtividade   = H.SetorAtividade
+      and TF.WAERS            = H.waers
 
 {
       @AnalyticsDetails.query.axis: #ROWS
@@ -83,12 +84,6 @@ define root view entity ZSD_C_SINTVLRPRVHEADERCDS
       @UI.selectionField: [ { position: 10 } ]
       @UI.textArrangement: #TEXT_ONLY
   key H.Compensado,
-
-      @UI.hidden: true
-  key H.EscritorioVendas,
-
-      @UI.hidden: true
-  key H.EquipeVendas,
 
       @AnalyticsDetails.query.axis: #FREE
       @Consumption.filter.selectionType: #INTERVAL
@@ -155,8 +150,6 @@ where(H.Compensado <> 'X')
       or(H.DataCompensacao between $parameters.p_DataInicio and $parameters.p_DataFim)))
 
 group by H.CodigoFornecedor,
-         H.EscritorioVendas,
-         H.EquipeVendas,
          H.ContratoCondicao,
          H.Compensado,
          H.SetorAtividade,
