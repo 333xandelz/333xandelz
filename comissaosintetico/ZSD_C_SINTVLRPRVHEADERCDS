@@ -42,6 +42,7 @@ define root view entity ZSD_C_SINTVLRPRVHEADERCDS
       and TF.ContratoCondicao = H.ContratoCondicao
       and TF.Compensado       = H.Compensado
       and TF.SetorAtividade   = H.SetorAtividade
+      and TF.WAERS            = H.waers
 
 {
       @AnalyticsDetails.query.axis: #ROWS
