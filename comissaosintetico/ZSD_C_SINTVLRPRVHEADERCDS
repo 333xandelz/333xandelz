@@ -34,13 +34,14 @@ define root view entity ZSD_C_SINTVLRPRVHEADERCDS
 
   as select from    ZSD_I_SINTVLRPRVHEADERCDS                as H
 
-    left outer join ZSD_I_TFSUMTOTALCDS(
+    left outer join ZSD_I_TFSUMSETORCDS(
                       p_client      : $session.client,
                       p_data_inicio : $parameters.p_DataInicio,
                       p_data_fim    : $parameters.p_DataFim) as TF
       on  TF.CodigoFornecedor = H.CodigoFornecedor
       and TF.ContratoCondicao = H.ContratoCondicao
       and TF.Compensado       = H.Compensado
+      and TF.SetorAtividade   = H.SetorAtividade
 
 {
       @AnalyticsDetails.query.axis: #ROWS
@@ -82,6 +83,13 @@ define root view entity ZSD_C_SINTVLRPRVHEADERCDS
       @UI.selectionField: [ { position: 10 } ]
       @UI.textArrangement: #TEXT_ONLY
   key H.Compensado,
+
+      @AnalyticsDetails.query.axis: #FREE
+      @Consumption.filter.selectionType: #INTERVAL
+      @UI.fieldGroup: [ { qualifier: 'OrgDataGroup', position: 40, label: 'Setor Atividade' } ]
+      @UI.lineItem: [ { position: 90, label: 'Setor Atividade' } ]
+  key H.SetorAtividade,
+
       max(H.CompensadoText)    as CompensadoText,
 
       @UI.identification: [ { position: 20, label: 'Nome do Fornecedor' } ]
@@ -143,4 +151,5 @@ where(H.Compensado <> 'X')
 group by H.CodigoFornecedor,
          H.ContratoCondicao,
          H.Compensado,
+         H.SetorAtividade,
          H.waers
